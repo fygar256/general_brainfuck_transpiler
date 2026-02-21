@@ -1,0 +1,10 @@
+{
+    ">" : "ptr += 1\n",
+    "<" : "ptr -= 1\n",
+    "+" : "tape[ptr] += 1\n",
+    "-" : "tape[ptr] -= 1\n",
+    "." : "print tape[ptr].chr\n",
+    "," : "tape[ptr] = $stdin.getbyte\n",
+    "[" : "while tape[ptr] != 0\n",
+    "]" : "end\n"
+}
