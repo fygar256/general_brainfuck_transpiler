@@ -126,37 +126,36 @@ def convert_brainfuck(filenameh, filename, filenamet, instructions):
 
 def main():
     """メイン関数"""
-    # オプション解析: -m <mapfile> を先に取り出す
     args = sys.argv[1:]
-    mapfile = ''
-
-    if '-m' in args:
-        idx = args.index('-m')
-        if idx + 1 >= len(args):
-            print("Error: -m option requires a map file argument", file=sys.stderr)
-            sys.exit(1)
-        mapfile = args[idx + 1]
-        del args[idx:idx + 2]
 
     l = len(args)
-    if l not in (1, 2, 3):
-        print(f"Usage: {sys.argv[0]} [-m <mapfile>] <headerfile> <file> <tailfile>", file=sys.stderr)
-        print(f"or   : {sys.argv[0]} [-m <mapfile>] <headerfile> <file>", file=sys.stderr)
-        print(f"or   : {sys.argv[0]} [-m <mapfile>] <file>", file=sys.stderr)
+    if l not in (1, 2, 3, 4):
+        print(f"Usage: {sys.argv[0]} <file.bf>", file=sys.stderr)
+        print(f"or   : {sys.argv[0]} <mapfile> <file.bf>", file=sys.stderr)
+        print(f"or   : {sys.argv[0]} <mapfile> <headerfile> <file.bf>", file=sys.stderr)
+        print(f"or   : {sys.argv[0]} <mapfile> <headerfile> <file.bf> <tailfile>", file=sys.stderr)
         sys.exit(1)
 
     if l == 1:
+        mapfile = ''
         filenameh = ''
         filename = args[0]
         filenamet = ''
     elif l == 2:
-        filenameh = args[0]
+        mapfile = args[0]
+        filenameh = ''
         filename = args[1]
         filenamet = ''
     elif l == 3:
-        filenameh = args[0]
-        filename = args[1]
-        filenamet = args[2]
+        mapfile = args[0]
+        filenameh = args[1]
+        filename = args[2]
+        filenamet = ''
+    elif l == 4:
+        mapfile = args[0]
+        filenameh = args[1]
+        filename = args[2]
+        filenamet = args[3]
 
     instructions = load_instructions(mapfile)
     convert_brainfuck(filenameh, filename, filenamet, instructions)
