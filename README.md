@@ -28,7 +28,7 @@ tailor.c
 ### Execution
 
 ```
-bfac.py -m map.c.json header.c mandelbrot.bf tailor.c>out.c # Convert to C
+bfac.py map.c.json header.c mandelbrot.bf tailor.c>out.c # Convert to C
 cc out.c # Compile
 a.out # Execution
 ```
@@ -46,7 +46,7 @@ map.py.json
 ### Execution
 
 ```
-bfac.py -m map.py.json header.py hello.bf > hello.py
+bfac.py map.py.json header.py hello.bf > hello.py
 python hello.py
 ```
 
