@@ -60,6 +60,27 @@ lgbt.py map.py.json header.py hello.bf > hello.py
 python hello.py
 ```
 
+## Ruby
+
+### Map file
+
+map.rb.json
+
+### Header file
+
+header.rb
+
+### Tailor file
+
+nothing
+
+### Execution
+
+```
+lgbt.py map.rb.json header.rb hello.bf > hello.rb
+ruby hello.rb
+```
+
 By applying this, I think it can be used in a wide range of languages.
 
 Ook and other languages ​​are also supported.
