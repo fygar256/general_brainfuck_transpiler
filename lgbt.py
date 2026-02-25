@@ -1,23 +1,40 @@
 #!/usr/bin/env python3
 
 """
-Brainfuck converter
-Converts Brainfuck code to any language
+Brainfuck Transpiler
+Converts Brainfuck code to any language.
+
+Usage (generic mode):
+  lgbt.py <file.bf>
+  lgbt.py <mapfile> <file.bf>
+  lgbt.py <mapfile> <headerfile> <file.bf>
+  lgbt.py <mapfile> <headerfile> <file.bf> <tailfile>
+
+Usage (assembly/label mode):
+  lgbt.py --asm <file.bf>
+  lgbt.py --asm <mapfile> <file.bf>
+  lgbt.py --asm <mapfile> <headerfile> <file.bf>
+  lgbt.py --asm <mapfile> <headerfile> <file.bf> <tailfile>
+
+In assembly mode, the map values for '[' and ']' may contain ']' and '['
+as placeholders respectively; these are replaced with generated loop labels.
 """
+
 import sys
 import json
 
-# デフォルトの命令マッピング
+# デフォルトの命令マッピング（汎用モード）
 DEFAULT_INSTRUCTIONS = {
     '>': "inc p\n",
     '<': "dec p\n",
-    '+': "inc [p]\n",
-    '-': "dec [p]\n",
+    '+': "inc *p\n",
+    '-': "dec *p\n",
     '.': "output\n",
     ',': "input\n",
     '[': "while *p\n",
     ']': "wend\n"
 }
+
 
 def load_instructions(mapfile):
     """外部JSONファイルから命令マッピングを読み込む"""
@@ -26,7 +43,6 @@ def load_instructions(mapfile):
     try:
         with open(mapfile, 'r') as fp:
             mapping = json.load(fp)
-        # 必須キーの確認
         required_keys = set('><+-.,[]')
         missing = required_keys - set(mapping.keys())
         if missing:
@@ -42,6 +58,11 @@ def load_instructions(mapfile):
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
+
+# ---------------------------------------------------------------------------
+# 汎用モード（インデント付き変換）
+# ---------------------------------------------------------------------------
+
 def emit(text, indent_level, indent_unit, at_line_start):
     """テキストを出力する。改行のたびに次の行頭へインデントを挿入する。"""
     for ch in text:
@@ -53,28 +74,25 @@ def emit(text, indent_level, indent_unit, at_line_start):
             at_line_start = True
     return at_line_start
 
-def convert_brainfuck(filenameh, filename, filenamet, instructions):
-    # インデント設定をマッピングから取り出す（変換対象の命令には含めない）
+
+def convert_generic(filenameh, filename, filenamet, instructions):
+    """汎用モード: インデントを管理しながら変換する"""
     indent_unit = "    "
     indent_chars = "["
     dedent_chars = "]"
     use_indent = bool(indent_unit)
 
     indent_level = 0
-    at_line_start = True  # 行頭かどうか（インデント挿入タイミング管理）
+    at_line_start = True
 
     def print_file_raw(fp):
-        """ヘッダ／テールはインデント処理なしでそのまま出力"""
         for ch in fp.read():
             print(ch, end='')
 
     def print_bf_char(char, indent_level, at_line_start):
-        """brainfuckの1文字を変換して出力し、インデントレベルと行頭フラグを返す"""
         if char not in instructions:
-            # brainfuck命令以外はすべて読み飛ばす
             return indent_level, at_line_start
 
-        # dedent命令は出力前にレベルを下げる
         if use_indent and char in dedent_chars:
             indent_level = max(0, indent_level - 1)
 
@@ -84,7 +102,6 @@ def convert_brainfuck(filenameh, filename, filenamet, instructions):
         else:
             print(text, end='')
 
-        # indent命令は出力後にレベルを上げる
         if use_indent and char in indent_chars:
             indent_level += 1
 
@@ -124,41 +141,130 @@ def convert_brainfuck(filenameh, filename, filenamet, instructions):
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
 
+
+# ---------------------------------------------------------------------------
+# アセンブリモード（ループラベル生成）
+# ---------------------------------------------------------------------------
+
+def _lsout(loopstack):
+    """ループスタックをラベル名用の文字列に変換する"""
+    return str(loopstack).replace(', ', '_').replace('[', '').replace(']', '')
+
+
+def convert_asm(filenameh, filename, filenamet, instructions):
+    """アセンブリモード: '[' / ']' にループラベルを生成して変換する"""
+
+    # ループラベル管理
+    state = {'lf': '[', 'loopstack': []}
+
+    def print_file_raw(fp):
+        for ch in fp.read():
+            print(ch, end='')
+
+    def print_bf_char(char):
+        if char not in instructions:
+            return
+
+        text = instructions[char]
+
+        if char == '[':
+            ls = state['loopstack']
+            if state['lf'] == ']':
+                ls[-1] += 1
+            else:
+                ls.append(1)
+            state['lf'] = '['
+            label = _lsout(ls)
+            print(f"LB{label}:")
+            new_text = text.replace(']', f" LE{label}")
+            print(new_text)
+
+        elif char == ']':
+            ls = state['loopstack']
+            if state['lf'] == ']':
+                ls.pop()
+            state['lf'] = ']'
+            label = _lsout(ls)
+            new_text = text.replace('[', f" LB{label}")
+            print(new_text)
+            print(f"LE{label}:")
+
+        else:
+            print(text, end='')
+
+    if filenameh != '':
+        try:
+            with open(filenameh, 'r') as fp:
+                print_file_raw(fp)
+        except FileNotFoundError:
+            print(f"Error: File '{filenameh}' not found", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    if filename != '':
+        try:
+            with open(filename, 'r') as fp:
+                for char in fp.read():
+                    print_bf_char(char)
+        except FileNotFoundError:
+            print(f"Error: File '{filename}' not found", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    if filenamet != '':
+        try:
+            with open(filenamet, 'r') as fp:
+                print_file_raw(fp)
+        except FileNotFoundError:
+            print(f"Error: File '{filenamet}' not found", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+
+# ---------------------------------------------------------------------------
+# エントリポイント
+# ---------------------------------------------------------------------------
+
 def main():
-    """メイン関数"""
     args = sys.argv[1:]
+
+    # --asm フラグの検出
+    asm_mode = False
+    if args and args[0] == '--asm':
+        asm_mode = True
+        args = args[1:]
 
     l = len(args)
     if l not in (1, 2, 3, 4):
-        print(f"Usage: {sys.argv[0]} <file.bf>", file=sys.stderr)
-        print(f"or   : {sys.argv[0]} <mapfile> <file.bf>", file=sys.stderr)
-        print(f"or   : {sys.argv[0]} <mapfile> <headerfile> <file.bf>", file=sys.stderr)
-        print(f"or   : {sys.argv[0]} <mapfile> <headerfile> <file.bf> <tailfile>", file=sys.stderr)
+        prog = sys.argv[0]
+        print(f"Usage: {prog} [--asm] <file.bf>", file=sys.stderr)
+        print(f"or   : {prog} [--asm] <mapfile> <file.bf>", file=sys.stderr)
+        print(f"or   : {prog} [--asm] <mapfile> <headerfile> <file.bf>", file=sys.stderr)
+        print(f"or   : {prog} [--asm] <mapfile> <headerfile> <file.bf> <tailfile>", file=sys.stderr)
         sys.exit(1)
 
     if l == 1:
-        mapfile = ''
-        filenameh = ''
-        filename = args[0]
-        filenamet = ''
+        mapfile, filenameh, filename, filenamet = '', '', args[0], ''
     elif l == 2:
-        mapfile = args[0]
-        filenameh = ''
-        filename = args[1]
-        filenamet = ''
+        mapfile, filenameh, filename, filenamet = args[0], '', args[1], ''
     elif l == 3:
-        mapfile = args[0]
-        filenameh = args[1]
-        filename = args[2]
-        filenamet = ''
-    elif l == 4:
-        mapfile = args[0]
-        filenameh = args[1]
-        filename = args[2]
-        filenamet = args[3]
+        mapfile, filenameh, filename, filenamet = args[0], args[1], args[2], ''
+    else:  # l == 4
+        mapfile, filenameh, filename, filenamet = args[0], args[1], args[2], args[3]
 
     instructions = load_instructions(mapfile)
-    convert_brainfuck(filenameh, filename, filenamet, instructions)
+
+    if asm_mode:
+        convert_asm(filenameh, filename, filenamet, instructions)
+    else:
+        convert_generic(filenameh, filename, filenamet, instructions)
+
 
 if __name__ == '__main__':
     main()
