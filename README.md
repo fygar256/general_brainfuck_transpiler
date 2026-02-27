@@ -20,7 +20,7 @@ When using assembly language, ']', '[' specified in the conversion destination s
 
 By default, lgbt.py converts to pseudo-assembly code. The language to convert to can be specified in the map file described later.
 
-Headers and footers will be required to run in the target language. Headers, footers, and map files for C, Python, Ruby, and x86_64 asssembly for FreeBSD are provided.
+Headers and footers will be required to run in the target language. Headers, footers, and map files for C, Python, Ruby,Common Lisp, and x86_64 asssembly for FreeBSD are provided.
 
 The number of command line arguments and their interpretation are as follows:
 
@@ -107,6 +107,20 @@ nothing
 lgbt.py map.rb.json header.rb hello.bf > hello.rb
 ruby hello.rb
 ```
+
+# Lisp
+header:header.lisp
+tailor:tailor.lisp
+map:map.lisp.json
+
+### execution
+
+```
+lgbt.py map.lisp.json header.lisp hello.bf tailor.lisp > hello.lisp
+sbcl --script hello.lisp
+```
+
+installation of sbcl required.
 
 # Assembly example x86_64
 
