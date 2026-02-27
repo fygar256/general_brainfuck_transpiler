@@ -12,6 +12,8 @@ The resulting source code is output to standard output; redirect it as lgbt.py f
 
 While transpiling from a high-level language to a lower-level language is generally difficult, transpiling from a lower-level language to a higher-level language is easy.
 
+Brainfuck is the lowest level language, so it can be converted into any general language. It is also Turing complete, so it has universal computational power and all operations except for special operations can be written in Brainfuck. However, it is not practical.
+
 When applied to general-purpose languages, indentation is automatically performed, so conversion to Python is also possible. Even if a single Brainfuck command spans multiple lines in the target language, you can write it with indentation by separating them with \n.
 
 When using assembly language, ']', '[' specified in the conversion destination string in the map file will be replaced with the corresponding ']', '[' label. LGBT replaces only the last '[' or ']' in the destination string in the map file with the jump destination label, so it can also be used for assembly languages ​​that use '[]', such as ARM64.
